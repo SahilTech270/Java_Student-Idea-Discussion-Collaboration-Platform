@@ -48,15 +48,25 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User loginRequest) {
+    public ResponseEntity<?> loginUser(@RequestBody User loginRequest, jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response) {
         try {
-            authenticationManager.authenticate(
+            org.springframework.security.core.Authentication authentication = authenticationManager.authenticate(
                     new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                             loginRequest.getEmail(), loginRequest.getPassword()));
 
+            org.springframework.security.core.context.SecurityContext context = org.springframework.security.core.context.SecurityContextHolder
+                    .createEmptyContext();
+            context.setAuthentication(authentication);
+            org.springframework.security.core.context.SecurityContextHolder.setContext(context);
+
+            // Persist the context in the session
+            new org.springframework.security.web.context.HttpSessionSecurityContextRepository()
+                    .saveContext(context, request, response);
+
             // Fetch validation full user object to return
             User user = userRepository.findByEmail(loginRequest.getEmail()).orElseThrow();
-            user.setPassword(null); // Do not return the password hash
+            // user.setPassword(null); // Not needed with WRITE_ONLY annotation
             return ResponseEntity.ok(user);
 
         } catch (Exception e) {

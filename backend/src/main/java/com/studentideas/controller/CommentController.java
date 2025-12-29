@@ -33,9 +33,6 @@ public class CommentController {
     }
 
     @PostMapping
-    public ResponseEntity<?> addComment(@RequestBody Map<String, Object> payload) {
-        // Simple payload handling: content, userId, ideaId, parentId (optional)
-        String content = (String) payload.get("content");
 
     public ResponseEntity<Comment> addComment(@RequestBody Comment comment) {
         if (comment.getIdea() == null || comment.getIdea().getId() == null || comment.getPostedBy() == null

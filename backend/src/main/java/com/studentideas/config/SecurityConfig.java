@@ -33,10 +33,18 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers("/api/users/register", "/api/users/login",
                                                                 "/h2-console/**", "/api/ideas/**", "/api/team/**",
-                                                                "/api/comments/**")
+                                                                "/api/comments/**", "/", "/login", "/register",
+                                                                "/css/**", "/js/**", "/images/**")
                                                 .permitAll()
-                                                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                                 .anyRequest().authenticated())
+                                .formLogin(form -> form
+                                                .loginPage("/login")
+                                                .defaultSuccessUrl("/dashboard", true)
+                                                .permitAll())
+                                .logout(logout -> logout
+                                                .logoutUrl("/logout")
+                                                .logoutSuccessUrl("/login?logout")
+                                                .permitAll())
                                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                                 .cors(cors -> cors.configurationSource(request -> {
                                         var corsConfiguration = new org.springframework.web.cors.CorsConfiguration();
