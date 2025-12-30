@@ -28,19 +28,32 @@ public class IdeaController {
         return ideaRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @Autowired
+    private com.studentideas.repository.CommunityRepository communityRepository;
+
     @PostMapping
-    public ResponseEntity<?> createIdea(@RequestBody Idea idea, @RequestParam Long userId) {
+    public ResponseEntity<?> createIdea(@RequestBody Idea idea, @RequestParam Long userId,
+            @RequestParam(required = false) Long communityId) {
         if (userId == null) {
             return ResponseEntity.badRequest().body("User ID is required");
         }
-        // In a real app we would get userId from the authenticated principal/token
         Optional<User> user = userRepository.findById(userId);
         if (user.isPresent()) {
             idea.setPostedBy(user.get());
+
+            if (communityId != null) {
+                communityRepository.findById(communityId).ifPresent(idea::setCommunity);
+            }
+
             Idea savedIdea = ideaRepository.save(idea);
             return ResponseEntity.ok(savedIdea);
         }
         return ResponseEntity.badRequest().body("User not found");
+    }
+
+    @GetMapping("/community/{communityId}")
+    public List<Idea> getIdeasByCommunity(@PathVariable Long communityId) {
+        return ideaRepository.findByCommunity_Id(communityId);
     }
 
     @GetMapping("/{id}")

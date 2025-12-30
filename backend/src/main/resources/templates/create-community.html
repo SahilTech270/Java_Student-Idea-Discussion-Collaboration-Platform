@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Community - IdeaHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                extend: {
+                    colors: { primary: '#6366f1', secondary: '#ec4899', dark: '#0f172a' }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+
+<body class="bg-dark text-gray-100 font-sans min-h-screen">
+
+    <nav class="glass sticky top-0 z-50 border-b border-white/5 bg-[#0f172a]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <a th:href="@{/dashboard}" class="text-2xl font-bold tracking-tight">Idea<span
+                        class="text-primary">Hub</span></a>
+                <a th:href="@{/communities}" class="text-gray-400 hover:text-white">Back to Communities</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-2xl mx-auto px-4 py-12">
+        <div class="glass-panel rounded-2xl p-8">
+            <h1 class="text-2xl font-bold text-white mb-6">Create a Community</h1>
+            <form id="createCommunityForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Community Name</label>
+                    <input type="text" id="name" required
+                        class="w-full bg-dark/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Description</label>
+                    <textarea id="description" rows="4"
+                        class="w-full bg-dark/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition"></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-primary hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-500/20">
+                    Create Community
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script th:src="@{/js/community.js}"></script>
+    <script>
+        document.getElementById('createCommunityForm').addEventListener('submit', createCommunity);
+    </script>
+</body>
+
+</html>

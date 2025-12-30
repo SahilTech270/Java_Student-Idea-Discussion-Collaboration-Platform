@@ -31,9 +31,13 @@ public class SecurityConfig {
                 http
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .authorizeHttpRequests(auth -> auth
+                                                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.FORWARD,
+                                                                jakarta.servlet.DispatcherType.ERROR)
+                                                .permitAll()
                                                 .requestMatchers("/api/users/register", "/api/users/login",
                                                                 "/h2-console/**", "/api/ideas/**", "/api/team/**",
-                                                                "/api/comments/**", "/", "/login", "/register",
+                                                                "/api/comments/**", "/api/communities/**", "/",
+                                                                "/login", "/register",
                                                                 "/css/**", "/js/**", "/images/**")
                                                 .permitAll()
                                                 .anyRequest().authenticated())

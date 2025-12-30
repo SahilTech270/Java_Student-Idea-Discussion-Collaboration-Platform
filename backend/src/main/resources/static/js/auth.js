@@ -2,35 +2,10 @@ const API_URL = 'http://localhost:8080/api/users';
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Login Form handling
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+    // Login Form handling - REPLACED BY SPRING SECURITY FORM LOGIN
+    // The form in login.html now posts directly to /login
 
-            try {
-                const response = await fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                if (response.ok) {
-                    const user = await response.json();
-                    localStorage.setItem('user', JSON.stringify(user));
-                    alert('Login Successful!');
-                    window.location.href = '/dashboard'; // We will create this next
-                } else {
-                    alert('Login Failed: ' + await response.text());
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred during login.');
-            }
-        });
-    }
+    // Register Form handling
 
     // Register Form handling
     const registerForm = document.getElementById('registerForm');

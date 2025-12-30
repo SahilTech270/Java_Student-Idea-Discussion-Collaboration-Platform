@@ -37,6 +37,10 @@ public class Idea {
     @JoinColumn(name = "user_id", nullable = false)
     private User postedBy;
 
+    @ManyToOne
+    @JoinColumn(name = "community_id")
+    private Community community;
+
     private LocalDateTime createdAt;
 
     // Stats for ranking (denormalized simple counters)

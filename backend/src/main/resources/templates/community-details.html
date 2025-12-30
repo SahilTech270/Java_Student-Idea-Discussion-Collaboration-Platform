@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Details - IdeaHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: { fontFamily: { sans: ['Outfit', 'sans-serif'] }, extend: { colors: { primary: '#6366f1', secondary: '#ec4899', dark: '#0f172a' } } }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+
+<body class="bg-dark text-gray-100 font-sans min-h-screen">
+
+    <nav class="glass sticky top-0 z-50 border-b border-white/5 bg-[#0f172a]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <a th:href="@{/dashboard}" class="text-2xl font-bold tracking-tight">Idea<span
+                        class="text-primary">Hub</span></a>
+                <a th:href="@{/communities}" class="text-gray-400 hover:text-white">Back to Communities</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="glass-panel p-8 rounded-2xl mb-8 relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 pointer-events-none"></div>
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 id="community-name" class="text-3xl font-bold text-white mb-2">Loading...</h1>
+                    <p id="community-desc" class="text-gray-400 max-w-2xl"></p>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="startProject()"
+                        class="bg-primary hover:bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium transition shadow-lg shadow-indigo-500/20 flex items-center">
+                        <span class="mr-2">🚀</span> Start Project
+                    </button>
+                    <button onclick="openAddMemberModal()"
+                        class="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-xl font-medium transition flex items-center border border-white/10">
+                        <span class="mr-2">👤</span> Add Member
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Projects -->
+            <div class="lg:col-span-2 space-y-6">
+                <h2 class="text-xl font-bold text-white flex items-center">
+                    <span class="mr-2">💡</span> Community Projects
+                </h2>
+                <div id="community-projects" class="space-y-4">
+                    <!-- Loaded dynamically -->
+                    <p class="text-gray-500">Loading projects...</p>
+                </div>
+            </div>
+
+            <!-- Members -->
+            <div class="lg:col-span-1">
+                <div class="glass-panel p-6 rounded-xl sticky top-24">
+                    <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+                        <span class="mr-2">👥</span> Members
+                    </h2>
+                    <ul id="community-members" class="space-y-3">
+                        <!-- Loaded dynamically -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="addMemberModal"
+        class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[100] backdrop-blur-sm">
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md mx-4">
+            <h3 class="text-xl font-bold text-white mb-4">Add Member</h3>
+            <p class="text-gray-400 text-sm mb-6">Enter the username of the person you want to add to this community.
+            </p>
+            <input type="text" id="newMemberUsername" placeholder="Username"
+                class="w-full bg-dark/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary mb-4">
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeAddMemberModal()" class="text-gray-400 hover:text-white px-4 py-2">Cancel</button>
+                <button onclick="addMember()"
+                    class="bg-primary text-white px-6 py-2 rounded-lg font-medium">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/community.js}"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const communityId = urlParams.get('id');
+        if (communityId) {
+            loadCommunityDetails(communityId);
+        } else {
+            alert('Community ID missing');
+            window.location.href = '/communities';
+        }
+
+        function startProject() {
+            window.location.href = `/post-idea?communityId=${communityId}`;
+        }
+    </script>
+</body>
+
+</html>

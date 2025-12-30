@@ -94,6 +94,8 @@
                     <div class="hidden md:flex ml-10 space-x-8">
                         <a th:href="@{/dashboard}"
                             class="text-white border-b-2 border-primary px-1 py-1 font-medium">Feed</a>
+                        <a th:href="@{/communities}"
+                            class="text-gray-400 hover:text-white px-1 py-1 font-medium transition">Communities</a>
                         <a th:href="@{/team-dashboard}"
                             class="text-gray-400 hover:text-white px-1 py-1 font-medium transition">Teams</a>
                     </div>
@@ -222,21 +224,44 @@
     <!-- Move scripts to end -->
     <script th:src="@{/js/idea.js}"></script>
     <script>
-        // Check auth
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (!user) window.location.href = '/login';
-        const userInitialEl = document.getElementById('nav-user-initial');
-        if (userInitialEl) {
-            userInitialEl.innerText = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+        // Check auth and get user details from session
+        async function initDashboard() {
+            try {
+                const response = await fetch('/api/users/me');
+                if (response.ok) {
+                    const user = await response.json();
+                    localStorage.setItem('user', JSON.stringify(user)); // Keep for legacy JS compatibility
+
+                    const userInitialEl = document.getElementById('nav-user-initial');
+                    if (userInitialEl) {
+                        userInitialEl.innerText = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+                    }
+
+                    if (typeof fetchIdeas === 'function') fetchIdeas();
+                } else {
+                    // Session invalid or expired
+                    localStorage.removeItem('user');
+                    // Spring Security should have redirected, but just in case
+                    // window.location.href = '/login'; 
+                    // Don't redirect loop. If 401, maybe just show public view or let Security filter handle it.
+                }
+            } catch (e) {
+                console.error("Auth check failed", e);
+            }
         }
 
         function logout() {
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            // Create a form to post to logout
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/logout';
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // Initial load
-        window.addEventListener('DOMContentLoaded', fetchIdeas);
+        window.addEventListener('DOMContentLoaded', initDashboard);
     </script>
 </body>
 

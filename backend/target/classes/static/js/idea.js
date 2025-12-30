@@ -120,7 +120,12 @@ if (postIdeaForm) {
         };
 
         try {
-            const response = await fetch(`${IDEA_API_URL}?userId=${user.id}`, {
+            const urlParams = new URLSearchParams(window.location.search);
+            const communityId = urlParams.get('communityId');
+            let url = `${IDEA_API_URL}?userId=${user.id}`;
+            if (communityId) url += `&communityId=${communityId}`;
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(ideaData)

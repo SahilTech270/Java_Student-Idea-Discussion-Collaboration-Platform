@@ -73,4 +73,18 @@ public class UserController {
             return ResponseEntity.status(401).body("Invalid credentials");
         }
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(org.springframework.security.core.Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).build();
+        }
+        // Principal might be email or username depending on UserDetailsService
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            user = userRepository.findByEmail(username).orElse(null);
+        }
+        return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
+    }
 }

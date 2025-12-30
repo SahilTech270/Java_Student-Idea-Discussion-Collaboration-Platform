@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Communities - IdeaHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                extend: {
+                    colors: { primary: '#6366f1', secondary: '#ec4899', dark: '#0f172a' }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+
+<body class="bg-dark text-gray-100 font-sans min-h-screen">
+
+    <!-- Navbar from dashboard -->
+    <nav class="glass sticky top-0 z-50 border-b border-white/5 bg-[#0f172a]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <a th:href="@{/dashboard}" class="text-2xl font-bold tracking-tight">Idea<span
+                        class="text-primary">Hub</span></a>
+                <div class="hidden md:flex ml-10 space-x-8">
+                    <a th:href="@{/dashboard}" class="text-gray-400 hover:text-white transition">Feed</a>
+                    <a th:href="@{/communities}"
+                        class="text-white border-b-2 border-primary px-1 font-medium">Communities</a>
+                </div>
+                <a th:href="@{/create-community}"
+                    class="bg-primary hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">+
+                    Create Community</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-white mb-8">Communities</h1>
+
+        <div id="communities-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading -->
+            <p class="text-gray-500">Loading communities...</p>
+        </div>
+    </div>
+
+    <script th:src="@{/js/community.js}"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', loadCommunities);
+    </script>
+</body>
+
+</html>

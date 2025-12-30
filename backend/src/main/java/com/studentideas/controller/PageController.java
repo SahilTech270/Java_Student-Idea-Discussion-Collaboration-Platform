@@ -55,4 +55,19 @@ public class PageController {
     public String editIdea() {
         return "edit-idea";
     }
+
+    @GetMapping("/communities")
+    public String communities() {
+        return "communities";
+    }
+
+    @GetMapping("/create-community")
+    public String createCommunity() {
+        return "create-community";
+    }
+
+    @GetMapping("/community-details")
+    public String communityDetails() {
+        return "community-details";
+    }
 }

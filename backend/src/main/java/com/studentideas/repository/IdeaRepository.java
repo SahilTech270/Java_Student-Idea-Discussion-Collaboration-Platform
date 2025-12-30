@@ -8,4 +8,6 @@ public interface IdeaRepository extends JpaRepository<Idea, Long> {
     List<Idea> findAllByOrderByCreatedAtDesc();
 
     List<Idea> findAllByPostedBy_Id(Long userId);
+
+    List<Idea> findByCommunity_Id(Long communityId);
 }
