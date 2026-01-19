@@ -1,23 +1,74 @@
 const API_BASE = 'http://localhost:8080/api';
+const urlParams = new URLSearchParams(window.location.search);
+const viewUserId = urlParams.get('userId'); // If null, viewing own profile
+
+let currentUser = null;
+let viewedUser = null;
+let stompClient = null;
+let chatSubscription = null;
 
 async function loadProfile() {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) return;
+    currentUser = JSON.parse(localStorage.getItem('user'));
+    if (!currentUser) {
+        window.location.href = '/login';
+        return;
+    }
 
-    // Render User Header
+    if (viewUserId && viewUserId != currentUser.id) {
+        // Fetch other user's details
+        try {
+            const response = await fetch(`${API_BASE}/users/${viewUserId}`);
+            if (response.ok) {
+                viewedUser = await response.json();
+                renderProfileData(viewedUser);
+                renderActions(false); // Not owner
+            } else {
+                alert("User not found");
+                window.location.href = '/dashboard';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    } else {
+        // Viewing Own Profile
+        viewedUser = currentUser;
+        renderProfileData(currentUser);
+        renderActions(true); // Is Owner
+    }
+
+    // Connect WS primarily for receiving messages if we stay on this page
+    connectWebSocket();
+    await loadMyIdeas(viewedUser.id);
+}
+
+function renderProfileData(user) {
     document.getElementById('profile-name').textContent = user.username;
     document.getElementById('profile-email').textContent = user.email;
     document.getElementById('profile-initial').textContent = user.username.charAt(0).toUpperCase();
 
-    // Render Interests
     if (user.interests) {
         const interestsHtml = user.interests.split(',').map(i =>
             `<span class="px-3 py-1 bg-white/5 rounded-full text-xs border border-white/10 text-gray-300">${i.trim()}</span>`
         ).join('');
         document.getElementById('profile-interests').innerHTML = interestsHtml;
     }
+}
 
-    await loadMyIdeas(user.id);
+function renderActions(isOwner) {
+    const actionContainer = document.getElementById('profile-actions');
+    if (isOwner) {
+        actionContainer.innerHTML = `
+            <a href="/settings" class="inline-flex items-center px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium transition text-white">
+                Edit Profile
+            </a>
+        `;
+    } else {
+        actionContainer.innerHTML = `
+            <button onclick="openChat()" class="inline-flex items-center px-4 py-2 bg-primary hover:bg-indigo-600 border border-transparent rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/30 transition text-white transform hover:scale-105">
+                💬 Message
+            </button>
+        `;
+    }
 }
 
 async function loadMyIdeas(userId) {
@@ -32,25 +83,22 @@ async function loadMyIdeas(userId) {
             document.getElementById('stat-upvotes').textContent = totalUpvotes;
 
             if (ideas.length === 0) {
-                console.log("No ideas found for user ID:", userId);
-                document.getElementById('my-ideas-grid').innerHTML = '<p class="text-center col-span-full text-gray-400 py-12">No ideas found. Try posting one from the Feed page!</p>';
+                document.getElementById('my-ideas-grid').innerHTML = '<p class="text-center col-span-full text-gray-400 py-12">No ideas found.</p>';
             } else {
                 renderMyIdeaCards(ideas);
             }
         } else {
-            console.error("Failed to fetch ideas:", response.status);
-            document.getElementById('my-ideas-grid').innerHTML = `<p class="text-center col-span-full text-red-400">Failed to load ideas (Status: ${response.status})</p>`;
+            document.getElementById('my-ideas-grid').innerHTML = `<p class="text-center col-span-full text-red-400">Failed to load ideas</p>`;
         }
     } catch (e) {
         console.error("Error loading ideas:", e);
-        document.getElementById('my-ideas-grid').innerHTML = `<p class="text-center col-span-full text-red-400">Error loading ideas: ${e.message}</p>`;
     }
 }
 
 function renderMyIdeaCards(ideas) {
     const container = document.getElementById('my-ideas-grid');
     if (ideas.length === 0) {
-        container.innerHTML = '<p class="text-center col-span-full text-gray-500 py-12">You haven\'t posted any ideas yet.</p>';
+        container.innerHTML = '<p class="text-center col-span-full text-gray-500 py-12">No ideas found.</p>';
         return;
     }
 
@@ -82,51 +130,110 @@ function renderMyIdeaCards(ideas) {
                     <span class="flex items-center">⬇️ ${idea.downvotes || 0}</span>
                 </div>
                 <div class="flex space-x-2">
-                    <a href="/edit-idea?id=${idea.id}" class="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 rounded-lg transition" title="Edit">
-                        ✏️
+                    <a href="/idea-details?id=${idea.id}" class="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-400/10 rounded-lg transition" title="View">
+                        👁️
                     </a>
-                    <div id="delete-wrapper-${idea.id}">
-                        <button onclick="showDeleteConfirm(${idea.id})" class="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition" title="Delete">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                            </svg>
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
     `).join('');
 }
 
-function showDeleteConfirm(id) {
-    const wrapper = document.getElementById(`delete-wrapper-${id}`);
-    if (wrapper) {
-        wrapper.innerHTML = `
-            <button onclick="deleteIdea(${id})" class="px-3 py-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-medium transition flex items-center animate-fade-in">
-                Confirm Delete
-            </button>
-        `;
-    }
-}
 
-async function deleteIdea(id) {
-    // No confirmation dialog needed as the button itself is the confirmation now
-    try {
-        const user = JSON.parse(localStorage.getItem('user'));
-        const response = await fetch(`${API_BASE}/ideas/${id}?userId=${user.id}`, {
-            method: 'DELETE'
+// --- CHAT LOGIC ---
+
+function connectWebSocket() {
+    const socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    stompClient.connect({}, function (frame) {
+        console.log('Connected: ' + frame);
+
+        // Subscribe to private queue
+        stompClient.subscribe('/user/queue/private', function (message) {
+            const chatMsg = JSON.parse(message.body);
+            displayMessage(chatMsg, 'received');
         });
 
-        if (response.ok) {
-            loadProfile(); // Refresh list
-        } else {
-            alert('Failed to delete idea.');
-        }
-    } catch (e) {
-        console.error(e);
-        alert('Error deleting idea.');
-    }
+    }, function (error) {
+        console.error("WS Error:", error);
+    });
 }
+
+function openChat() {
+    document.getElementById('chat-modal').classList.remove('hidden');
+    document.getElementById('chat-modal').classList.add('flex');
+    document.getElementById('chat-user-name').textContent = viewedUser.username;
+    // Clear previous or load history (History not implemented yet)
+    document.getElementById('chat-messages').innerHTML = '<div class="text-center text-xs text-gray-500 mt-4">Start of conversation</div>';
+}
+
+function closeChat() {
+    document.getElementById('chat-modal').classList.add('hidden');
+    document.getElementById('chat-modal').classList.remove('flex');
+}
+
+// Send Message
+document.getElementById('chat-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('chat-input');
+    const content = input.value.trim();
+
+    if (content && stompClient) {
+        const chatMessage = {
+            sender: currentUser.username,
+            recipient: viewedUser.username, // Send to username
+            content: content,
+            type: 'CHAT'
+        };
+
+        // Send to private endpoint
+        stompClient.send("/app/chat.private", {}, JSON.stringify(chatMessage));
+
+        // Display my own message
+        displayMessage(chatMessage, 'sent');
+        input.value = '';
+    }
+});
+
+function displayMessage(message, type) {
+    // Only display if relevant to current chat or general notification
+    // If modal is open and we are chatting with this person:
+    const chatBox = document.getElementById('chat-messages');
+
+    // For received messages, verify sender is the one we are viewing? 
+    // Or if we are just viewing our own profile, maybe we shouldn't open chat automatically?
+    // Current simple logic: append to modal if open.
+
+    // Check flow:
+    // 1. I am User A. I visit User B. I Open Chat.
+    // 2. I send message. 'sent' displayed.
+    // 3. User B (online) gets message in background.
+    // 4. User B needs to see notification or if chat open, see message.
+
+    const div = document.createElement('div');
+    if (type === 'sent') {
+        div.className = "flex justify-end";
+        div.innerHTML = `
+            <div class="bg-primary text-white rounded-l-lg rounded-tr-lg px-4 py-2 max-w-[80%] text-sm shadow-md">
+                ${message.content}
+            </div>
+        `;
+    } else {
+        // Received
+        div.className = "flex justify-start";
+        div.innerHTML = `
+            <div class="bg-white/10 text-gray-200 rounded-r-lg rounded-tl-lg px-4 py-2 max-w-[80%] text-sm border border-white/5">
+                <div class="text-[10px] text-gray-400 mb-1">${message.sender}</div>
+                ${message.content}
+            </div>
+        `;
+    }
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
 
 // Init
 window.addEventListener('DOMContentLoaded', loadProfile);

@@ -23,8 +23,25 @@ public class IdeaController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+
     @GetMapping
-    public List<Idea> getAllIdeas() {
+    public List<Idea> getAllIdeas(
+            @RequestParam(required = false) String domain,
+            @RequestParam(required = false) String sortBy) {
+
+        if (domain != null && !domain.isEmpty()) {
+            if ("likes".equalsIgnoreCase(sortBy)) {
+                return ideaRepository.findAllByDomainOrderByUpvotesDesc(domain);
+            }
+            return ideaRepository.findAllByDomainOrderByCreatedAtDesc(domain);
+        }
+
+        if ("likes".equalsIgnoreCase(sortBy)) {
+            return ideaRepository.findAllByOrderByUpvotesDesc();
+        }
+
         return ideaRepository.findAllByOrderByCreatedAtDesc();
     }
 
@@ -46,6 +63,7 @@ public class IdeaController {
             }
 
             Idea savedIdea = ideaRepository.save(idea);
+            messagingTemplate.convertAndSend("/topic/ideas", savedIdea);
             return ResponseEntity.ok(savedIdea);
         }
         return ResponseEntity.badRequest().body("User not found");
@@ -101,18 +119,65 @@ public class IdeaController {
         return score;
     }
 
+    @Autowired
+    private com.studentideas.repository.VoteRepository voteRepository;
+
     @PostMapping("/{id}/upvote")
-    public ResponseEntity<?> upvoteIdea(@PathVariable Long id) {
-        Idea idea = ideaRepository.findById(id).orElseThrow();
-        idea.setUpvotes(idea.getUpvotes() + 1);
-        return ResponseEntity.ok(ideaRepository.save(idea));
+    public ResponseEntity<?> upvoteIdea(@PathVariable Long id, @RequestParam Long userId) {
+        return handleVote(id, userId, com.studentideas.model.VoteType.UPVOTE);
     }
 
     @PostMapping("/{id}/downvote")
-    public ResponseEntity<?> downvoteIdea(@PathVariable Long id) {
-        Idea idea = ideaRepository.findById(id).orElseThrow();
-        idea.setDownvotes(idea.getDownvotes() + 1);
-        return ResponseEntity.ok(ideaRepository.save(idea));
+    public ResponseEntity<?> downvoteIdea(@PathVariable Long id, @RequestParam Long userId) {
+        return handleVote(id, userId, com.studentideas.model.VoteType.DOWNVOTE);
+    }
+
+    private ResponseEntity<?> handleVote(Long ideaId, Long userId, com.studentideas.model.VoteType type) {
+        Idea idea = ideaRepository.findById(ideaId).orElseThrow(() -> new RuntimeException("Idea not found"));
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+
+        Optional<com.studentideas.model.Vote> existingVoteOpt = voteRepository.findByUserAndIdea(user, idea);
+
+        if (existingVoteOpt.isPresent()) {
+            com.studentideas.model.Vote existingVote = existingVoteOpt.get();
+            if (existingVote.getVoteType() == type) {
+                // Same vote type -> Toggle OFF (remove vote)
+                voteRepository.delete(existingVote);
+                if (type == com.studentideas.model.VoteType.UPVOTE) {
+                    idea.setUpvotes(Math.max(0, idea.getUpvotes() - 1));
+                } else {
+                    idea.setDownvotes(Math.max(0, idea.getDownvotes() - 1));
+                }
+            } else {
+                // Different vote type -> Switch vote
+                existingVote.setVoteType(type);
+                voteRepository.save(existingVote);
+                if (type == com.studentideas.model.VoteType.UPVOTE) {
+                    idea.setUpvotes(idea.getUpvotes() + 1);
+                    idea.setDownvotes(Math.max(0, idea.getDownvotes() - 1));
+                } else {
+                    idea.setDownvotes(idea.getDownvotes() + 1);
+                    idea.setUpvotes(Math.max(0, idea.getUpvotes() - 1));
+                }
+            }
+        } else {
+            // New Vote
+            com.studentideas.model.Vote newVote = new com.studentideas.model.Vote();
+            newVote.setUser(user);
+            newVote.setIdea(idea);
+            newVote.setVoteType(type);
+            voteRepository.save(newVote);
+
+            if (type == com.studentideas.model.VoteType.UPVOTE) {
+                idea.setUpvotes(idea.getUpvotes() + 1);
+            } else {
+                idea.setDownvotes(idea.getDownvotes() + 1);
+            }
+        }
+
+        Idea savedIdea = ideaRepository.save(idea);
+        messagingTemplate.convertAndSend("/topic/ideas", savedIdea);
+        return ResponseEntity.ok(savedIdea);
     }
 
     @GetMapping("/user/{userId}")

@@ -7,6 +7,63 @@ if (!ideaId) {
     window.location.href = '/dashboard';
 }
 
+// WebSocket Setup
+let stompClient = null;
+
+function connectWebSocket() {
+    const socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.debug = null; // Disable debug logs
+
+    stompClient.connect({}, function (frame) {
+        console.log('Connected: ' + frame);
+
+        // Subscribe to Comments
+        stompClient.subscribe(`/topic/idea/${ideaId}/comments`, function (message) {
+            const comment = JSON.parse(message.body);
+            appendComment(comment);
+        });
+
+        // Subscribe to Idea Updates (e.g. Likes)
+        stompClient.subscribe('/topic/ideas', function (message) {
+            const updatedIdea = JSON.parse(message.body);
+            if (updatedIdea.id == ideaId) {
+                updateIdeaStats(updatedIdea);
+            }
+        });
+
+    }, function (error) {
+        console.error("WebSocket connection error:", error);
+        // Optional: Retry logic
+        setTimeout(connectWebSocket, 5000);
+    });
+}
+
+function updateIdeaStats(idea) {
+    const upEl = document.getElementById('upvote-count');
+    const downEl = document.getElementById('downvote-count');
+    if (upEl) upEl.innerText = idea.upvotes;
+    if (downEl) downEl.innerText = idea.downvotes;
+}
+
+function appendComment(comment) {
+    // If it's a reply, find parent and append (simple reload is safer for threading, but let's try direct append)
+    // For simplicity, if it's a root comment, prepend/append to list. 
+    // If it's a reply, we might just reload the list or find the parent div.
+
+    if (comment.parentComment) {
+        // It's a reply. Re-fetching is easier to ensure correct tree structure
+        loadComments();
+    } else {
+        // Root comment - Check if already exists to avoid duplication (from own post)
+        // But our POST doesn't append manually anymore, wait for WS? 
+        // Actually, the POST handler currently calls loadComments(). 
+        // We should remove manual loadComments() from POST success if we trust WS.
+        // For now, let's just re-load to be safe and consistent with sorting.
+        loadComments();
+    }
+}
+
 async function loadIdea() {
     try {
         const response = await fetch(`${API_BASE}/ideas/${ideaId}`);
@@ -232,13 +289,15 @@ function renderComment(comment, isReply = false) {
 }
 
 async function upvote() {
-    await fetch(`${API_BASE}/ideas/${ideaId}/upvote`, { method: 'POST' });
-    loadIdea(); // Refresh
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) return alert('Please login to vote');
+    await fetch(`${API_BASE}/ideas/${ideaId}/upvote?userId=${user.id}`, { method: 'POST' });
 }
 
 async function downvote() {
-    await fetch(`${API_BASE}/ideas/${ideaId}/downvote`, { method: 'POST' });
-    loadIdea(); // Refresh
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) return alert('Please login to vote');
+    await fetch(`${API_BASE}/ideas/${ideaId}/downvote?userId=${user.id}`, { method: 'POST' });
 }
 
 async function reportIdea() {
@@ -275,8 +334,8 @@ document.getElementById('commentForm').addEventListener('submit', async (e) => {
         if (response.ok) {
             document.getElementById('commentContent').value = '';
             window.replyingToId = null;
-            document.getElementById('commentContent').placeholder = "Add to the discussion..."; // Reset placeholder
-            loadComments();
+            document.getElementById('commentContent').placeholder = "Add to the discussion...";
+            // loadComments(); // Relies on WebSocket to update
         } else {
             alert('Failed to post comment');
         }
@@ -297,4 +356,5 @@ function replyTo(commentId) {
 window.addEventListener('DOMContentLoaded', () => {
     loadIdea();
     loadComments();
+    connectWebSocket(); // Start WebSocket
 });

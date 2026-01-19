@@ -25,6 +25,9 @@ public class CommentController {
     private IdeaRepository ideaRepository;
 
     @Autowired
+    private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
     private UserRepository userRepository;
 
     @GetMapping("/idea/{ideaId}")
@@ -33,7 +36,6 @@ public class CommentController {
     }
 
     @PostMapping
-
     public ResponseEntity<Comment> addComment(@RequestBody Comment comment) {
         if (comment.getIdea() == null || comment.getIdea().getId() == null || comment.getPostedBy() == null
                 || comment.getPostedBy().getId() == null) {
@@ -61,6 +63,9 @@ public class CommentController {
         // Update idea stats (naive)
         idea.setCommentCount(idea.getCommentCount() + 1);
         ideaRepository.save(idea);
+
+        // Broadcast comment to listeners of this specific idea
+        messagingTemplate.convertAndSend("/topic/idea/" + idea.getId() + "/comments", savedComment);
 
         return ResponseEntity.ok(savedComment);
     }
