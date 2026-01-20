@@ -18,10 +18,6 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    // Direct password saving for simplicity in this step, will update with BCrypt
-    // later if needed
-    // Actually, let's just simulate it or wait for SecurityConfig
-
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
@@ -66,7 +62,7 @@ public class UserController {
 
             // Fetch validation full user object to return
             User user = userRepository.findByEmail(loginRequest.getEmail()).orElseThrow();
-            // user.setPassword(null); // Not needed with WRITE_ONLY annotation
+
             return ResponseEntity.ok(user);
 
         } catch (Exception e) {
